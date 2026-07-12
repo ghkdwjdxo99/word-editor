@@ -8,6 +8,11 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
-  <ItemGroup><ProjectReference Include="..\SimpleWordEditor\SimpleWordEditor.csproj" /></ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SimpleWordEditor\SimpleWordEditor.csproj" />
+    <Compile Remove="UiHarness\**\*.cs" />
+    <EmbeddedResource Remove="UiHarness\**\*" />
+    <None Remove="UiHarness\**\*" />
+  </ItemGroup>
 
 </Project>
