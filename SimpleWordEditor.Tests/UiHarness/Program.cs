@@ -76,9 +76,11 @@ internal static class Program
         ctrlF.Command.Execute(null); Pump();
         var findPanel = (FrameworkElement)window.FindName("FindPanel"); var findBox = (TextBox)window.FindName("FindTextBox"); var findStatus = (TextBlock)window.FindName("FindStatusText");
         findBox.Text = "찾기"; Pump();
-        var firstFind = editor.Selection.Text; typeof(MainWindow).GetMethod("MoveFind", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, new object[] { true }); Pump();
-        var secondFind = editor.Selection.Text;
-        Console.WriteLine($"Find|CtrlF={findPanel.Visibility == Visibility.Visible}|First={firstFind}|Next={secondFind}|Status={findStatus.Text}|Dirty={state.IsDirty}|Body={EditorText(editor).Contains("찾기 Search 찾기 123")}");
+        var moveFind = typeof(MainWindow).GetMethod("MoveFind", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var firstFind = editor.Selection.Text; moveFind.Invoke(window, new object[] { true }); Pump();
+        var secondFind = editor.Selection.Text; moveFind.Invoke(window, new object[] { false }); Pump();
+        var previousFind = editor.Selection.Text;
+        Console.WriteLine($"Find|CtrlF={findPanel.Visibility == Visibility.Visible}|First={firstFind}|Next={secondFind}|Previous={previousFind}|Status={findStatus.Text}|Dirty={state.IsDirty}|Body={EditorText(editor).Contains("찾기 Search 찾기 123")}");
         typeof(MainWindow).GetMethod("CloseFind", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, null); Pump();
         Console.WriteLine($"FindClose|Closed={findPanel.Visibility == Visibility.Collapsed}|SelectionRestored={editor.Selection.Text == "Search"}|Dirty={state.IsDirty}|Body={EditorText(editor).Contains("찾기 Search 찾기 123")}");
 
