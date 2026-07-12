@@ -1,0 +1,5 @@
+**/bin/
+**/obj/
+.localappdata/
+*.user
+*.tmp
