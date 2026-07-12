@@ -70,7 +70,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File SimpleWordEditor.Tests\q
 - 개발 기획: `docs/plans/`
 - 테스트 결과: `docs/test-reports/`
 - 버전 이력: `docs/project/버전_이력.md`
+- 결함 및 패치 이력: `docs/project/결함_및_패치_이력.md`
 - AI 역할 및 인수인계: `docs/workflow/AI_역할_및_작업_절차.md`
 - v1.0.0 역할별 작업 메시지: `docs/workflow/handoffs/v1.0.0/`
 - 폴더 관리 규칙: `docs/README.md`
 - 배포 정책: `docs/project/배포_정책.md`
+- 제품 로드맵: `docs/project/제품_로드맵.md`
