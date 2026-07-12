@@ -3,3 +3,4 @@
 .localappdata/
 *.user
 *.tmp
+dist/win-x64/

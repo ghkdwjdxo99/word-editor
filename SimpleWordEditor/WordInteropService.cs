@@ -21,6 +21,10 @@ public sealed class WordInteropService
             // wdFormatDocumentDefault=16 (.docx), wdFormatDocument97=0 (.doc)
             doc!.GetType().InvokeMember("SaveAs2", System.Reflection.BindingFlags.InvokeMethod, null, doc, [Path.GetFullPath(output), toDocx ? 16 : 0]);
         }
+        catch (Exception ex) when (ex is not NotSupportedException)
+        {
+            throw new WordInteropException("Microsoft Word 문서 변환에 실패했습니다.", ex);
+        }
         finally
         {
             TryInvoke(doc, "Close", [false]); TryInvoke(app, "Quit", [false]);

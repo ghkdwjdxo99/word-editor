@@ -9,4 +9,5 @@ public sealed class DocumentState
     public bool HasUnsupportedContent { get; set; }
     public bool UnsupportedWarningShown { get; set; }
     public string DisplayName => Path is null ? "제목 없음" : System.IO.Path.GetFileName(Path);
+    public string WindowTitle => $"{DisplayName}{(IsDirty ? "*" : "")} - 간단 워드 편집기";
 }

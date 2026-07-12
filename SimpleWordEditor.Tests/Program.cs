@@ -98,6 +98,42 @@ static int RunTests()
             catch (UnsupportedEditorContentException ex) { Check(ex.BlockTypes.Contains(name), $"V100-P02 {name} 저장 차단"); }
         }
 
+        // V100-P06: 선택한 저장 형식과 실제 확장자가 항상 일치한다.
+        Check(SaveTargetResolver.Resolve("문서", DocumentFormat.Docx, false).Path.EndsWith("문서.docx"), "V100-P06 무확장 DOCX 보정");
+        var wrongExtension = SaveTargetResolver.Resolve("문서.txt", DocumentFormat.Docx, false);
+        Check(wrongExtension.Result == SaveTargetResult.ConfirmationRequired && wrongExtension.Path.EndsWith("문서.docx"), "V100-P06 잘못된 확장자 확인 요구");
+        Check(SaveTargetResolver.Resolve("문서.txt", DocumentFormat.Docx, false, true).Result == SaveTargetResult.Accepted, "V100-P06 확장자 확인 후 보정");
+        Check(SaveTargetResolver.Resolve("문서.doc", DocumentFormat.Doc, false).Result == SaveTargetResult.UnsupportedDoc, "V100-P06 Word 없는 DOC 차단");
+        Check(SaveTargetResolver.Resolve("문서.DOC", DocumentFormat.Doc, true).Result == SaveTargetResult.Accepted, "V100-P06 DOC 대소문자 허용");
+
+        // V100-P07: 별표는 마지막 저장 이후 변경된 경우에만 표시한다.
+        var state = new DocumentState();
+        Check(state.WindowTitle == "제목 없음 - 간단 워드 편집기", "V100-P07 새 빈 문서 별표 없음");
+        state.IsDirty = true; Check(state.WindowTitle == "제목 없음* - 간단 워드 편집기", "V100-P07 편집 후 별표 표시");
+        state.Path = "저장 문서.docx"; state.IsDirty = false; Check(state.WindowTitle == "저장 문서.docx - 간단 워드 편집기", "V100-P07 저장 후 별표 제거");
+
+        // V100-P08: 선택 영역의 지원 서식과 혼합 상태를 읽는다.
+        var formatEditor = new RichTextBox();
+        var left = new Paragraph { TextAlignment = System.Windows.TextAlignment.Left };
+        left.Inlines.Add(new Run("굵은 밑줄") { FontWeight = System.Windows.FontWeights.Bold, TextDecorations = System.Windows.TextDecorations.Underline, FontSize = 16 });
+        var right = new Paragraph(new Run("일반")) { TextAlignment = System.Windows.TextAlignment.Right };
+        formatEditor.Document = new FlowDocument(); formatEditor.Document.Blocks.Add(left); formatEditor.Document.Blocks.Add(right);
+        formatEditor.Selection.Select(left.ContentStart, left.ContentEnd);
+        var singleFormat = EditorFormatState.Read(formatEditor);
+        Check(singleFormat.Bold == true && singleFormat.Underline == true && singleFormat.Alignment == System.Windows.TextAlignment.Left, "V100-P08 단일 서식 상태");
+        formatEditor.Selection.Select(left.ContentStart, right.ContentEnd);
+        var mixedFormat = EditorFormatState.Read(formatEditor);
+        Check(mixedFormat.Bold is null && mixedFormat.Underline is null && mixedFormat.Alignment is null, "V100-P08 혼합 서식 상태");
+
+        // V100-P09: 감싼 내부 예외까지 확인해 사용자 행동별 오류를 분류한다.
+        Check(UserErrorClassifier.Classify(new InvalidDataException("outer", new UnauthorizedAccessException())).Kind == UserErrorKind.Permission, "V100-P09 내부 권한 오류 분류");
+        Check(UserErrorClassifier.Classify(new TestIOException(unchecked((int)0x80070020))).Kind == UserErrorKind.FileInUse, "V100-P09 파일 점유 분류");
+        Check(UserErrorClassifier.Classify(new TestIOException(unchecked((int)0x80070070))).Kind == UserErrorKind.DiskFull, "V100-P09 공간 부족 분류");
+        Check(UserErrorClassifier.Classify(new InvalidDataException()).Kind == UserErrorKind.CorruptDocument, "V100-P09 손상 문서 분류");
+        Check(UserErrorClassifier.Classify(new WordInteropException("word", new Exception())).Kind == UserErrorKind.WordInterop, "V100-P09 Word 연동 오류 분류");
+        var unsupportedEditorError = UserErrorClassifier.Classify(new UnsupportedEditorContentException(["Table"]));
+        Check(unsupportedEditorError.Kind == UserErrorKind.Unsupported && unsupportedEditorError.Action.Contains("Table"), "V100-P02 비지원 편집 블록 사용자 안내", $"Kind={unsupportedEditorError.Kind}, Action={unsupportedEditorError.Action}");
+
         Dispatcher.CurrentDispatcher.InvokeShutdown();
         Console.WriteLine($"총 {passes}건 통과, {failures.Count}건 실패");
         return failures.Count == 0 ? 0 : 1;
@@ -114,4 +150,9 @@ static IEnumerable<(string Name, Block Block)> UnsupportedBlocks()
     var list = new List(); var item = new ListItem(); item.Blocks.Add(new Paragraph(new Run("목록 본문"))); list.ListItems.Add(item);
     var table = new Table(); var group = new TableRowGroup(); var row = new TableRow(); var cell = new TableCell(new Paragraph(new Run("표 본문"))); row.Cells.Add(cell); group.Rows.Add(row); table.RowGroups.Add(group);
     return [(nameof(Section), section), (nameof(List), list), (nameof(Table), table)];
+}
+
+sealed class TestIOException : IOException
+{
+    public TestIOException(int hresult) => HResult = hresult;
 }

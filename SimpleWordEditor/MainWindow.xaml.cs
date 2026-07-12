@@ -12,6 +12,7 @@ public partial class MainWindow : Window
     private readonly DocumentState state = new();
     private readonly WordInteropService word = new();
     private bool loading;
+    private bool syncingToolbar;
 
     public MainWindow()
     {
@@ -66,9 +67,14 @@ public partial class MainWindow : Window
         if (saveAs || target is null)
         {
             var filter = word.IsAvailable ? "DOCX 문서 (*.docx)|*.docx|DOC 문서 (*.doc)|*.doc" : "DOCX 문서 (*.docx)|*.docx";
-            var dialog = new SaveFileDialog { Filter = filter, DefaultExt = ".docx", AddExtension = true, FileName = state.DisplayName == "제목 없음" ? "새 문서.docx" : state.DisplayName };
-            if (dialog.ShowDialog(this) != true) return false; target = dialog.FileName;
+            var dialog = new SaveFileDialog { Filter = filter, DefaultExt = ".docx", AddExtension = false, FileName = state.DisplayName == "제목 없음" ? "새 문서.docx" : state.DisplayName };
+            if (dialog.ShowDialog(this) != true) return false;
+            var selectedFormat = dialog.FilterIndex == 2 ? DocumentFormat.Doc : DocumentFormat.Docx;
+            target = ResolveSaveTarget(dialog.FileName, selectedFormat);
+            if (target is null) return false;
         }
+        else target = ResolveSaveTarget(target, state.Format);
+        if (target is null) return false;
         try
         {
             var model = RichTextConverter.FromEditor(Editor);
@@ -98,7 +104,18 @@ public partial class MainWindow : Window
         var result = MessageBox.Show(this, "변경 내용을 저장하시겠습니까?", "간단 워드 편집기", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
         return result == MessageBoxResult.No || (result == MessageBoxResult.Yes && Save());
     }
-    private void UpdateChrome() { Title = $"{state.DisplayName}{(state.IsDirty ? "*" : "")} - 간단 워드 편집기"; StatusText.Text = $"형식: {state.Format.ToString().ToUpperInvariant()}   |   Word 연동: {(word.IsAvailable ? "사용 가능" : "사용 불가")}"; }
+    private string? ResolveSaveTarget(string candidate, DocumentFormat format)
+    {
+        var decision = SaveTargetResolver.Resolve(candidate, format, word.IsAvailable);
+        if (decision.Result == SaveTargetResult.UnsupportedDoc) { MessageBox.Show(this, decision.Message!, "지원하지 않는 저장 형식", MessageBoxButton.OK, MessageBoxImage.Information); return null; }
+        if (decision.Result == SaveTargetResult.ConfirmationRequired)
+        {
+            if (MessageBox.Show(this, decision.Message!, "확장자 확인", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return null;
+            decision = SaveTargetResolver.Resolve(candidate, format, word.IsAvailable, confirmReplacement: true);
+        }
+        return decision.Path;
+    }
+    private void UpdateChrome() { Title = state.WindowTitle; StatusText.Text = $"형식: {state.Format.ToString().ToUpperInvariant()}   |   Word 연동: {(word.IsAvailable ? "사용 가능" : "사용 불가")}"; }
     private void Toggle(DependencyProperty property, object on, object? off) { var current = Editor.Selection.GetPropertyValue(property); Editor.Selection.ApplyPropertyValue(property, Equals(current, on) ? off ?? DependencyProperty.UnsetValue : on); Editor.Focus(); }
     private void Align(TextAlignment value) { foreach (var p in Editor.Selection.Start.Paragraph is { } start ? Editor.Document.Blocks.OfType<Paragraph>().Where(p => p.ContentStart.CompareTo(Editor.Selection.End) <= 0 && p.ContentEnd.CompareTo(Editor.Selection.Start) >= 0) : []) p.TextAlignment = value; Editor.Focus(); }
     private void ApplyFontSize()
@@ -106,14 +123,26 @@ public partial class MainWindow : Window
         var text = FontSizeBox.Text; if (FontSizeBox.SelectedItem is ComboBoxItem item) text = item.Content?.ToString() ?? text;
         if (double.TryParse(text, out var points) && points is >= 8 and <= 72) Editor.Selection.ApplyPropertyValue(TextElement.FontSizeProperty, points * 96 / 72); else MessageBox.Show(this, "글자 크기는 8~72pt 사이여야 합니다.", "글자 크기", MessageBoxButton.OK, MessageBoxImage.Information);
     }
-    private static void ShowError(string title, Exception ex) { var action = ex switch { UnauthorizedAccessException => "파일 권한을 확인하거나 다른 위치를 선택해 주세요.", IOException => "파일이 다른 프로그램에서 사용 중인지, 저장 공간이 충분한지 확인해 주세요.", InvalidDataException => "손상되었거나 지원하지 않는 문서일 수 있습니다.", NotSupportedException => ex.Message, _ => "다시 시도하거나 다른 파일을 선택해 주세요." }; MessageBox.Show($"{title}.\n{action}", title, MessageBoxButton.OK, MessageBoxImage.Error); }
+    private static void ShowError(string title, Exception ex) { var error = UserErrorClassifier.Classify(ex); MessageBox.Show($"{title}.\n{error.Action}", title, MessageBoxButton.OK, MessageBoxImage.Error); }
 
     private void Editor_TextChanged(object sender, TextChangedEventArgs e) { if (!loading) { state.IsDirty = true; UpdateChrome(); } }
-    private void Editor_SelectionChanged(object sender, RoutedEventArgs e) { BoldButton.IsChecked = Equals(Editor.Selection.GetPropertyValue(TextElement.FontWeightProperty), FontWeights.Bold); ItalicButton.IsChecked = Equals(Editor.Selection.GetPropertyValue(TextElement.FontStyleProperty), FontStyles.Italic); }
+    private void Editor_SelectionChanged(object sender, RoutedEventArgs e)
+    {
+        var format = EditorFormatState.Read(Editor); syncingToolbar = true;
+        try
+        {
+            BoldButton.IsChecked = format.Bold; ItalicButton.IsChecked = format.Italic; UnderlineButton.IsChecked = format.Underline;
+            FontSizeBox.SelectedIndex = -1; FontSizeBox.Text = format.FontSize?.ToString("0.##") ?? "";
+            LeftButton.IsChecked = format.Alignment is null ? null : format.Alignment == TextAlignment.Left;
+            CenterButton.IsChecked = format.Alignment is null ? null : format.Alignment == TextAlignment.Center;
+            RightButton.IsChecked = format.Alignment is null ? null : format.Alignment == TextAlignment.Right;
+        }
+        finally { syncingToolbar = false; }
+    }
     private void New_Click(object s, RoutedEventArgs e) => NewDocument(); private void Open_Click(object s, RoutedEventArgs e) => OpenDocument(); private void Save_Click(object s, RoutedEventArgs e) => Save(); private void SaveAs_Click(object s, RoutedEventArgs e) => Save(true); private void Exit_Click(object s, RoutedEventArgs e) => Close();
     private void Bold_Click(object s, RoutedEventArgs e) => Toggle(TextElement.FontWeightProperty, FontWeights.Bold, FontWeights.Normal); private void Italic_Click(object s, RoutedEventArgs e) => Toggle(TextElement.FontStyleProperty, FontStyles.Italic, FontStyles.Normal); private void Underline_Click(object s, RoutedEventArgs e) => Toggle(Inline.TextDecorationsProperty, TextDecorations.Underline, null);
     private void Left_Click(object s, RoutedEventArgs e) => Align(TextAlignment.Left); private void Center_Click(object s, RoutedEventArgs e) => Align(TextAlignment.Center); private void Right_Click(object s, RoutedEventArgs e) => Align(TextAlignment.Right);
-    private void FontSize_Changed(object s, SelectionChangedEventArgs e) { if (IsLoaded) ApplyFontSize(); } private void FontSize_KeyDown(object s, KeyEventArgs e) { if (e.Key == Key.Enter) { ApplyFontSize(); e.Handled = true; } }
+    private void FontSize_Changed(object s, SelectionChangedEventArgs e) { if (IsLoaded && !syncingToolbar) ApplyFontSize(); } private void FontSize_KeyDown(object s, KeyEventArgs e) { if (e.Key == Key.Enter) { ApplyFontSize(); e.Handled = true; } }
     private void Window_Closing(object? s, CancelEventArgs e) { if (!ConfirmDiscard()) e.Cancel = true; }
 }
 

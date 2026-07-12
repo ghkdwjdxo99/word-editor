@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SimpleWordEditor"
         mc:Ignorable="d"
-        Title="제목 없음* - 간단 워드 편집기" Height="720" Width="1000" MinHeight="450" MinWidth="650"
+        Title="제목 없음 - 간단 워드 편집기" Height="720" Width="1000" MinHeight="450" MinWidth="650"
         Closing="Window_Closing">
     <DockPanel>
         <StatusBar DockPanel.Dock="Bottom"><TextBlock x:Name="StatusText" /></StatusBar>
@@ -21,13 +21,13 @@
             </MenuItem>
         </Menu>
         <ToolBarTray DockPanel.Dock="Top"><ToolBar>
-            <ToggleButton x:Name="BoldButton" Content="굵게" FontWeight="Bold" Click="Bold_Click" ToolTip="굵게 (Ctrl+B)"/>
-            <ToggleButton x:Name="ItalicButton" Content="기울임" FontStyle="Italic" Click="Italic_Click" ToolTip="기울임 (Ctrl+I)"/>
-            <ToggleButton x:Name="UnderlineButton" Content="밑줄" Click="Underline_Click" ToolTip="밑줄 (Ctrl+U)"/>
+            <ToggleButton x:Name="BoldButton" IsThreeState="True" Content="굵게" FontWeight="Bold" Click="Bold_Click" ToolTip="굵게 (Ctrl+B)"/>
+            <ToggleButton x:Name="ItalicButton" IsThreeState="True" Content="기울임" FontStyle="Italic" Click="Italic_Click" ToolTip="기울임 (Ctrl+I)"/>
+            <ToggleButton x:Name="UnderlineButton" IsThreeState="True" Content="밑줄" Click="Underline_Click" ToolTip="밑줄 (Ctrl+U)"/>
             <Separator/><ComboBox x:Name="FontSizeBox" Width="70" IsEditable="True" SelectionChanged="FontSize_Changed" KeyDown="FontSize_KeyDown">
                 <ComboBoxItem Content="8"/><ComboBoxItem Content="9"/><ComboBoxItem Content="10"/><ComboBoxItem Content="11" IsSelected="True"/><ComboBoxItem Content="12"/><ComboBoxItem Content="14"/><ComboBoxItem Content="16"/><ComboBoxItem Content="18"/><ComboBoxItem Content="24"/><ComboBoxItem Content="36"/><ComboBoxItem Content="48"/><ComboBoxItem Content="72"/>
             </ComboBox>
-            <Separator/><Button Content="왼쪽" Click="Left_Click"/><Button Content="가운데" Click="Center_Click"/><Button Content="오른쪽" Click="Right_Click"/>
+            <Separator/><ToggleButton x:Name="LeftButton" IsThreeState="True" Content="왼쪽" Click="Left_Click"/><ToggleButton x:Name="CenterButton" IsThreeState="True" Content="가운데" Click="Center_Click"/><ToggleButton x:Name="RightButton" IsThreeState="True" Content="오른쪽" Click="Right_Click"/>
         </ToolBar></ToolBarTray>
         <RichTextBox x:Name="Editor" AcceptsTab="True" VerticalScrollBarVisibility="Auto" TextChanged="Editor_TextChanged" SelectionChanged="Editor_SelectionChanged" Padding="20" FontFamily="맑은 고딕" FontSize="14.6667"/>
     </DockPanel>
