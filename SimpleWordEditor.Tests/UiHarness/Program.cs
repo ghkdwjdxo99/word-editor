@@ -70,6 +70,18 @@ internal static class Program
         editor.Selection.Select(p1.ContentStart, p2.ContentEnd); Pump();
         Console.WriteLine($"ToolbarMixed|Bold={Toggle(window,"BoldButton")}|Italic={Toggle(window,"ItalicButton")}|Underline={Toggle(window,"UnderlineButton")}|SizeEmpty={string.IsNullOrEmpty(((ComboBox)window.FindName("FontSizeBox")).Text)}|Left={Toggle(window,"LeftButton")}|Center={Toggle(window,"CenterButton")}|Right={Toggle(window,"RightButton")}");
 
+        editor.Document = new FlowDocument(new Paragraph(new Run("찾기 Search 찾기 123"))); state.IsDirty = false;
+        var findSnapshot = FlowDocumentSearchSnapshot.Create(editor.Document); findSnapshot.Select(editor, FindEngine.FindAll(findSnapshot.Text, "Search", true).Single());
+        var ctrlF = window.InputBindings.OfType<System.Windows.Input.KeyBinding>().Single(x => x.Key == System.Windows.Input.Key.F && x.Modifiers == System.Windows.Input.ModifierKeys.Control);
+        ctrlF.Command.Execute(null); Pump();
+        var findPanel = (FrameworkElement)window.FindName("FindPanel"); var findBox = (TextBox)window.FindName("FindTextBox"); var findStatus = (TextBlock)window.FindName("FindStatusText");
+        findBox.Text = "찾기"; Pump();
+        var firstFind = editor.Selection.Text; typeof(MainWindow).GetMethod("MoveFind", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, new object[] { true }); Pump();
+        var secondFind = editor.Selection.Text;
+        Console.WriteLine($"Find|CtrlF={findPanel.Visibility == Visibility.Visible}|First={firstFind}|Next={secondFind}|Status={findStatus.Text}|Dirty={state.IsDirty}|Body={EditorText(editor).Contains("찾기 Search 찾기 123")}");
+        typeof(MainWindow).GetMethod("CloseFind", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, null); Pump();
+        Console.WriteLine($"FindClose|Closed={findPanel.Visibility == Visibility.Collapsed}|SelectionRestored={editor.Selection.Text == "Search"}|Dirty={state.IsDirty}|Body={EditorText(editor).Contains("찾기 Search 찾기 123")}");
+
         state.IsDirty = true; var closeCancel = DialogTimer("취소", _ => { }); closeCancel.Start(); window.Close(); Console.WriteLine($"CloseCancel|Visible={window.IsVisible}");
         var closeNo = DialogTimer("아니요", _ => { }); closeNo.Start(); window.Close(); Console.WriteLine($"CloseNo|Closed={!window.IsVisible}");
         app.Shutdown();

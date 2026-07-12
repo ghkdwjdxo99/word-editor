@@ -135,6 +135,31 @@ static int RunTests()
         var unsupportedEditorError = UserErrorClassifier.Classify(new UnsupportedEditorContentException(["Table"]));
         Check(unsupportedEditorError.Kind == UserErrorKind.Unsupported && unsupportedEditorError.Action.Contains("Table"), "V100-P02 비지원 편집 블록 사용자 안내", $"Kind={unsupportedEditorError.Kind}, Action={unsupportedEditorError.Action}");
 
+        // V110-F01: UI와 분리된 검색 엔진 및 WPF 선택 어댑터.
+        Check(FindEngine.FindAll("한글 찾기 한글", "한글", false).Count == 2, "V110-F01 한글 검색");
+        Check(FindEngine.FindAll("English 123 공백 검색", "123", false).Single().Start == 8, "V110-F01 영문/숫자 검색");
+        Check(FindEngine.FindAll("공백 포함 검색", "포함 검", false).Count == 1, "V110-F01 공백 검색");
+        Check(FindEngine.FindAll("abc", "없음", false).Count == 0, "V110-F01 결과 없음");
+        Check(FindEngine.FindAll("abc", "", false).Count == 0, "V110-F01 빈 검색어");
+        Check(FindEngine.FindAll("Word word WORD", "word", false).Count == 3 && FindEngine.FindAll("Word word WORD", "word", true).Count == 1, "V110-F01 대소문자 옵션");
+        var navigation = new FindEngine(); navigation.Search("하나 둘 하나", "하나", false);
+        var first = navigation.Next(); var second = navigation.Next(); var wrappedNext = navigation.Next(); var wrappedPrevious = navigation.Previous();
+        Check(first?.Start == 0 && second?.Start == 5, "V110-F01 다음 결과 이동");
+        Check(wrappedNext?.Start == 0 && wrappedPrevious?.Start == 5, "V110-F01 앞뒤 순환");
+
+        var searchEditor = new RichTextBox();
+        var searchP1 = new Paragraph(); searchP1.Inlines.Add(new Run("앞 ")); searchP1.Inlines.Add(new Bold(new Run("중첩 검색")));
+        var searchP2 = new Paragraph(new Run("다음 문단")); searchEditor.Document = new FlowDocument(); searchEditor.Document.Blocks.Add(searchP1); searchEditor.Document.Blocks.Add(searchP2);
+        var snapshot = FlowDocumentSearchSnapshot.Create(searchEditor.Document);
+        Check(snapshot.Text == "앞 중첩 검색\n다음 문단", "V110-F01 표시 본문 스냅샷 및 문단 경계", $"Actual={snapshot.Text}");
+        Check(FindEngine.FindAll(snapshot.Text, "검색다음", false).Count == 0, "V110-F01 문단 경계 비연결");
+        var textChangedBySearch = false; searchEditor.TextChanged += (_, _) => textChangedBySearch = true;
+        var beforeSearch = snapshot.Text; var searchMatch = FindEngine.FindAll(snapshot.Text, "중첩 검색", false).Single();
+        Check(snapshot.Select(searchEditor, searchMatch), "V110-F01 검색 결과 선택");
+        var afterSearch = FlowDocumentSearchSnapshot.Create(searchEditor.Document).Text;
+        var unchangedState = new DocumentState { IsDirty = false };
+        Check(!textChangedBySearch && beforeSearch == afterSearch && !unchangedState.IsDirty, "V110-F01 검색 후 본문/변경 상태 미변경");
+
         Dispatcher.CurrentDispatcher.InvokeShutdown();
         Console.WriteLine($"총 {passes}건 통과, {failures.Count}건 실패");
         return failures.Count == 0 ? 0 : 1;
