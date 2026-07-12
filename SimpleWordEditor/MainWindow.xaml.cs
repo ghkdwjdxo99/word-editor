@@ -13,6 +13,10 @@ public partial class MainWindow : Window
     private readonly WordInteropService word = new();
     private bool loading;
     private bool syncingToolbar;
+    private readonly FindEngine findEngine = new();
+    private FlowDocumentSearchSnapshot? findSnapshot;
+    private TextPointer? selectionBeforeFindStart;
+    private TextPointer? selectionBeforeFindEnd;
 
     public MainWindow()
     {
@@ -23,6 +27,7 @@ public partial class MainWindow : Window
         InputBindings.Add(new KeyBinding(new RelayCommand(_ => OpenDocument()), Key.O, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(new RelayCommand(_ => Save()), Key.S, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(new RelayCommand(_ => Save(true)), Key.S, ModifierKeys.Control | ModifierKeys.Shift));
+        InputBindings.Add(new KeyBinding(new RelayCommand(_ => OpenFind()), Key.F, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(new RelayCommand(_ => Toggle(TextElement.FontWeightProperty, FontWeights.Bold, FontWeights.Normal)), Key.B, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(new RelayCommand(_ => Toggle(TextElement.FontStyleProperty, FontStyles.Italic, FontStyles.Normal)), Key.I, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(new RelayCommand(_ => Toggle(Inline.TextDecorationsProperty, TextDecorations.Underline, null)), Key.U, ModifierKeys.Control));
@@ -125,7 +130,48 @@ public partial class MainWindow : Window
     }
     private static void ShowError(string title, Exception ex) { var error = UserErrorClassifier.Classify(ex); MessageBox.Show($"{title}.\n{error.Action}", title, MessageBoxButton.OK, MessageBoxImage.Error); }
 
-    private void Editor_TextChanged(object sender, TextChangedEventArgs e) { if (!loading) { state.IsDirty = true; UpdateChrome(); } }
+    private void OpenFind()
+    {
+        if (FindPanel.Visibility != Visibility.Visible)
+        {
+            selectionBeforeFindStart = Editor.Selection.Start;
+            selectionBeforeFindEnd = Editor.Selection.End;
+            FindPanel.Visibility = Visibility.Visible;
+            RefreshFind(moveToFirst: false);
+        }
+        FindTextBox.Focus(); FindTextBox.SelectAll();
+    }
+
+    private void CloseFind()
+    {
+        FindPanel.Visibility = Visibility.Collapsed;
+        if (selectionBeforeFindStart != null && selectionBeforeFindEnd != null)
+        {
+            try { Editor.Selection.Select(selectionBeforeFindStart, selectionBeforeFindEnd); } catch (InvalidOperationException) { }
+        }
+        selectionBeforeFindStart = selectionBeforeFindEnd = null;
+        Editor.Focus();
+    }
+
+    private void RefreshFind(bool moveToFirst)
+    {
+        findSnapshot = FlowDocumentSearchSnapshot.Create(Editor.Document);
+        findEngine.Search(findSnapshot.Text, FindTextBox.Text, MatchCaseCheckBox.IsChecked == true);
+        if (string.IsNullOrEmpty(FindTextBox.Text)) { FindStatusText.Text = "검색어를 입력하세요."; return; }
+        if (findEngine.Matches.Count == 0) { FindStatusText.Text = "검색 결과가 없습니다."; return; }
+        FindStatusText.Text = $"{findEngine.Matches.Count}개 결과";
+        if (moveToFirst) MoveFind(next: true);
+    }
+
+    private void MoveFind(bool next)
+    {
+        if (findSnapshot is null || findEngine.Matches.Count == 0) { RefreshFind(moveToFirst: false); if (findEngine.Matches.Count == 0) return; }
+        var match = next ? findEngine.Next() : findEngine.Previous();
+        if (match is null || !findSnapshot!.Select(Editor, match.Value)) return;
+        FindStatusText.Text = $"{findEngine.CurrentIndex + 1}/{findEngine.Matches.Count}";
+    }
+
+    private void Editor_TextChanged(object sender, TextChangedEventArgs e) { if (!loading) { state.IsDirty = true; UpdateChrome(); if (FindPanel.Visibility == Visibility.Visible) RefreshFind(moveToFirst: false); } }
     private void Editor_SelectionChanged(object sender, RoutedEventArgs e)
     {
         var format = EditorFormatState.Read(Editor); syncingToolbar = true;
@@ -143,6 +189,17 @@ public partial class MainWindow : Window
     private void Bold_Click(object s, RoutedEventArgs e) => Toggle(TextElement.FontWeightProperty, FontWeights.Bold, FontWeights.Normal); private void Italic_Click(object s, RoutedEventArgs e) => Toggle(TextElement.FontStyleProperty, FontStyles.Italic, FontStyles.Normal); private void Underline_Click(object s, RoutedEventArgs e) => Toggle(Inline.TextDecorationsProperty, TextDecorations.Underline, null);
     private void Left_Click(object s, RoutedEventArgs e) => Align(TextAlignment.Left); private void Center_Click(object s, RoutedEventArgs e) => Align(TextAlignment.Center); private void Right_Click(object s, RoutedEventArgs e) => Align(TextAlignment.Right);
     private void FontSize_Changed(object s, SelectionChangedEventArgs e) { if (IsLoaded && !syncingToolbar) ApplyFontSize(); } private void FontSize_KeyDown(object s, KeyEventArgs e) { if (e.Key == Key.Enter) { ApplyFontSize(); e.Handled = true; } }
+    private void Find_Click(object s, RoutedEventArgs e) => OpenFind();
+    private void CloseFind_Click(object s, RoutedEventArgs e) => CloseFind();
+    private void FindNext_Click(object s, RoutedEventArgs e) => MoveFind(next: true);
+    private void FindPrevious_Click(object s, RoutedEventArgs e) => MoveFind(next: false);
+    private void FindText_Changed(object s, TextChangedEventArgs e) { if (IsLoaded) RefreshFind(moveToFirst: true); }
+    private void FindOptions_Changed(object s, RoutedEventArgs e) { if (IsLoaded) RefreshFind(moveToFirst: true); }
+    private void FindText_KeyDown(object s, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape) { CloseFind(); e.Handled = true; }
+        else if (e.Key == Key.Enter) { MoveFind(next: (Keyboard.Modifiers & ModifierKeys.Shift) == 0); e.Handled = true; }
+    }
     private void Window_Closing(object? s, CancelEventArgs e) { if (!ConfirmDiscard()) e.Cancel = true; }
 }
 
