@@ -3,4 +3,11 @@
 .localappdata/
 *.user
 *.tmp
-dist/win-x64/
+artifacts/
+dist/
+*.exe
+*.dll
+*.zip
+*.msi
+*.msix
+*.sha256
