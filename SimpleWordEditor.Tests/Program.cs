@@ -115,12 +115,13 @@ static int RunTests()
         // V100-P08: 선택 영역의 지원 서식과 혼합 상태를 읽는다.
         var formatEditor = new RichTextBox();
         var left = new Paragraph { TextAlignment = System.Windows.TextAlignment.Left };
-        left.Inlines.Add(new Run("굵은 밑줄") { FontWeight = System.Windows.FontWeights.Bold, TextDecorations = System.Windows.TextDecorations.Underline, FontSize = 16 });
+        left.Inlines.Add(new Run("굵은 밑줄") { FontWeight = System.Windows.FontWeights.Bold, TextDecorations = System.Windows.TextDecorations.Underline, FontSize = 16 * 96 / 72 });
         var right = new Paragraph(new Run("일반")) { TextAlignment = System.Windows.TextAlignment.Right };
         formatEditor.Document = new FlowDocument(); formatEditor.Document.Blocks.Add(left); formatEditor.Document.Blocks.Add(right);
         formatEditor.Selection.Select(left.ContentStart, left.ContentEnd);
         var singleFormat = EditorFormatState.Read(formatEditor);
-        Check(singleFormat.Bold == true && singleFormat.Underline == true && singleFormat.Alignment == System.Windows.TextAlignment.Left, "V100-P08 단일 서식 상태");
+        Check(singleFormat.Bold == true && singleFormat.Underline == true && singleFormat.FontSize == 16 && singleFormat.Alignment == System.Windows.TextAlignment.Left, "V100-P08 단일 서식 상태");
+        Check(singleFormat.FontSize == 16, "BUG-V100-002 16pt 도구 모음 표시", $"Actual={singleFormat.FontSize}");
         formatEditor.Selection.Select(left.ContentStart, right.ContentEnd);
         var mixedFormat = EditorFormatState.Read(formatEditor);
         Check(mixedFormat.Bold is null && mixedFormat.Underline is null && mixedFormat.Alignment is null, "V100-P08 혼합 서식 상태");

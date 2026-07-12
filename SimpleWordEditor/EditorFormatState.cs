@@ -33,7 +33,14 @@ public sealed record EditorFormatState(bool? Bold, bool? Italic, bool? Underline
     private static double? ReadFontSize(TextRange selection)
     {
         var value = selection.GetPropertyValue(TextElement.FontSizeProperty);
-        return value == DependencyProperty.UnsetValue || value is not double pixels ? null : Math.Round(pixels * 72 / 96, 2);
+        if (value == DependencyProperty.UnsetValue || value is not double pixels) return null;
+        var points = pixels * 72 / 96;
+        // WPF는 일부 DPI 글자 크기를 1 DIP 단위로 양자화한다(16pt → 21 DIP → 15.75pt).
+        // 정수 포인트와 0.25pt 이내인 경우 사용자가 지정한 정수 크기로 표시한다.
+        var nearestInteger = Math.Round(points, MidpointRounding.AwayFromZero);
+        return Math.Abs(points - nearestInteger) <= 0.25 + double.Epsilon
+            ? nearestInteger
+            : Math.Round(points, 2, MidpointRounding.AwayFromZero);
     }
 
     private static TextAlignment? ReadAlignment(TextRange selection)
