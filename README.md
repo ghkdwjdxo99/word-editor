@@ -2,7 +2,29 @@
 
 Windows용 단일 창 DOCX 편집기입니다. 외부 문서 처리 패키지 없이 .NET/WPF 기본 API만 사용합니다.
 
-## 실행
+## 일반 사용자: 다운로드 및 실행
+
+사용자는 저장소의 `bin` 폴더나 소스 코드에 있는 파일을 실행하지 않습니다. 아래 배포
+ZIP 안에 들어 있는 `SimpleWordEditor.exe`를 사용합니다.
+
+1. [Windows x64 실행본 ZIP 다운로드](https://github.com/ghkdwjdxo99/word-editor/raw/refs/heads/main/dist/SimpleWordEditor-v1.0.0-preview.1-win-x64.zip)를 누릅니다.
+2. 내려받은 `SimpleWordEditor-v1.0.0-preview.1-win-x64.zip`을 원하는 폴더에 완전히 압축 해제합니다.
+3. 압축을 푼 폴더의 `SimpleWordEditor.exe`를 실행합니다.
+4. 같은 폴더의 DLL 파일은 삭제하거나 다른 곳으로 옮기지 않습니다.
+
+이 배포본은 64비트 Windows용 자체 포함 실행본이므로 .NET SDK나 .NET Desktop Runtime을
+별도로 설치할 필요가 없습니다. Windows가 처음 실행할 때 보호 경고를 표시하면 파일의
+출처가 이 저장소인지 확인한 후 실행 여부를 결정하세요.
+
+현재 배포 ZIP의 SHA-256은 다음과 같습니다.
+
+```text
+BDAF05917DA15D4532D87EFBE44E6252E9E1EF28E6AB734E72E9DF1715C4EFBC
+```
+
+## 개발자: 소스에서 실행
+
+.NET 10 SDK가 설치된 개발 환경에서는 다음 명령으로 실행합니다.
 
 ```powershell
 dotnet run --project SimpleWordEditor\SimpleWordEditor.csproj
@@ -28,13 +50,6 @@ dotnet run --project SimpleWordEditor.Tests\SimpleWordEditor.Tests.csproj --no-b
 - Word 설치 환경에서 COM을 통한 DOC 열기/저장
 
 표, 이미지, 머리글, 각주 등은 보존하지 않으며 감지 시 저장 전에 경고합니다.
-
-## Windows 실행 파일
-
-`dist/SimpleWordEditor-v1.0.0-preview.1-win-x64.zip`을 내려받아 압축을 푼 뒤
-`SimpleWordEditor.exe`를 실행하세요. Windows x64용 자체 포함 배포본이므로 .NET을
-별도로 설치할 필요가 없습니다. 압축 파일에 포함된 DLL은 실행 파일과 같은 폴더에
-두어야 합니다.
 
 ## 프로젝트 문서
 
