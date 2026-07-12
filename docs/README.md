@@ -4,6 +4,7 @@
 
 ```text
 워드 편집기/
+├─ dist/                      사용자 배포용 ZIP
 ├─ SimpleWordEditor/          프로그램 소스 프로젝트
 ├─ SimpleWordEditor.Tests/    자동 회귀 테스트 프로젝트
 ├─ docs/
@@ -17,7 +18,7 @@
 └─ .gitignore                 Git 제외 규칙
 ```
 
-빌드 중 생성되는 `bin/`, `obj/`, `.localappdata/`는 결과물이 아니라 임시 파일이므로 Git에서 제외한다. 배포 결과물이 필요해지면 루트에 임시로 두지 않고 `artifacts/releases/vX.Y.Z/`에 생성하며, Git 포함 여부는 Git 관리자가 결정한다.
+빌드 중 생성되는 `bin/`, `obj/`, `.localappdata/`, `dist/win-x64/`는 재생성 가능한 로컬 파일이므로 Git에서 제외한다. 사용자에게 전달하는 검증된 배포 ZIP만 `dist/`에 두며, Git 포함 여부는 Git 관리자가 결정한다.
 
 ## 파일 배치 규칙
 

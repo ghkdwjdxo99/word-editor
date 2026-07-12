@@ -22,6 +22,34 @@ ZIP 안에 들어 있는 `SimpleWordEditor.exe`를 사용합니다.
 BDAF05917DA15D4532D87EFBE44E6252E9E1EF28E6AB734E72E9DF1715C4EFBC
 ```
 
+### ZIP으로 배포하는 이유
+
+프로그램은 `SimpleWordEditor.exe` 외에도 WPF 실행에 필요한 네이티브 DLL 파일을 함께
+사용합니다. EXE 하나만 올리면 약 131MB로 GitHub의 단일 파일 제한을 넘고, DLL을 따로
+받게 하면 누락하기 쉽습니다. 따라서 실행에 필요한 파일을 하나의 ZIP으로 묶습니다.
+ZIP은 설치 프로그램이 아니며, 압축을 풀고 EXE를 실행하는 휴대용 배포본입니다.
+
+## 저장소 폴더 구조
+
+```text
+word-editor/
+├─ dist/                    일반 사용자가 받는 배포 ZIP
+├─ docs/                    기획서, 버전 이력, 테스트 결과, 작업 규칙
+├─ SimpleWordEditor/        실제 워드 편집기 프로그램 소스 코드
+├─ SimpleWordEditor.Tests/  프로그램 기능을 검증하는 자동 회귀 테스트 코드
+├─ SimpleWordEditor.slnx    두 프로젝트를 묶는 .NET 솔루션 파일
+├─ NuGet.Config             빌드에 사용하는 패키지 소스 설정
+├─ .gitignore               Git에 올리지 않을 임시 파일 규칙
+└─ README.md                다운로드, 실행 방법과 프로젝트 안내
+```
+
+- 일반 사용자는 `dist/`의 ZIP과 이 README만 보면 됩니다.
+- 프로그램을 수정하려는 개발자는 `SimpleWordEditor/`와 `SimpleWordEditor.slnx`를 사용합니다.
+- 변경 후 정상 동작을 확인하려면 `SimpleWordEditor.Tests/`의 테스트를 실행합니다.
+- 개발 과정과 판단 근거를 확인하려면 `docs/`를 봅니다.
+- 빌드할 때 생기는 `bin/`, `obj/`, `.localappdata/`, `dist/win-x64/`는 재생성 가능한
+  로컬 파일이므로 Git에 올리지 않습니다.
+
 ## 개발자: 소스에서 실행
 
 .NET 10 SDK가 설치된 개발 환경에서는 다음 명령으로 실행합니다.
